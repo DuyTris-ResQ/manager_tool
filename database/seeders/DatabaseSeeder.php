@@ -1,0 +1,46 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\User;
+use App\Models\Setting;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     */
+    public function run(): void
+    {
+        // Create Default Admin User
+        User::updateOrCreate(
+            ['email' => 'admin@gmail.com'],
+            [
+                'name' => 'Administrator',
+                'password' => Hash::make('admin'),
+            ]
+        );
+
+        // Create Default Settings
+        $defaultSettings = [
+            'maintenance' => '0',
+            'minimum_version' => '1.0.0',
+            'notice' => 'System is working normally. Thank you for using our app!',
+            'trial_days' => '3',
+            'heartbeat_interval' => '300',
+            'sepay_merchant_id' => 'SP-LIVE-NDB76738',
+            'sepay_api_key' => 'spsk_live_MEfSBdFcN6zq63X5uspojuVnsWLHHVz2',
+            'sepay_env' => 'production',
+            'payment_gateway' => 'sepay',
+        ];
+
+        foreach ($defaultSettings as $key => $value) {
+            Setting::updateOrCreate(
+                ['key' => $key],
+                ['value' => $value]
+            );
+        }
+    }
+}
