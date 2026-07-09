@@ -107,6 +107,15 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | To maintain request integrity between client and server we use a shared
+    | HMAC secret key that is used to sign and verify API requests.
+    |
+    */
+
+    'hmac_secret_key' => env('HMAC_SECRET_KEY', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     |
