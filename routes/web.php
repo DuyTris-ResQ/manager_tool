@@ -16,6 +16,12 @@ Route::get('/', function () {
     return redirect()->route('admin.dashboard');
 });
 
+// Route to clear config cache (handy for shared hosting)
+Route::get('/clear-config', function() {
+    \Illuminate\Support\Facades\Artisan::call('config:clear');
+    return "Config cache cleared successfully!";
+});
+
 // Admin Auth Routes
 Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('admin.login');
 Route::post('/admin/login', [AuthController::class, 'login'])->name('admin.login.submit');
