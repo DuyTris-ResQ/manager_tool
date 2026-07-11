@@ -20,8 +20,8 @@ class HmacMiddleware
             return $next($request);
         }
 
-        // Exempt payment webhook from HMAC (called by external gateways)
-        if ($request->is('api/payment/webhook')) {
+        // Exempt public settings and webhooks from HMAC (no request payload or called by external gateways)
+        if ($request->is('api/settings') || $request->is('api/payment/webhook')) {
             return $next($request);
         }
 
