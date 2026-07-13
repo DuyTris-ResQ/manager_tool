@@ -501,6 +501,7 @@
                 payosCard.style.display = 'flex';
             } else if (activeVal === 'sepay') {
                 sepayCard.style.display = 'flex';
+                vietqrCard.style.display = 'flex'; // Hiển thị cấu hình ngân hàng cho SePay để tạo QR
             }
         }
 
