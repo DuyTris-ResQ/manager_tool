@@ -257,11 +257,11 @@
                         <span>🔑 Cho phép tạo Giấy phép (Key)</span>
                     </label>
                     <label class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
-                        <input type="checkbox" id="edit-perm-manage" name="perm_create_license" value="1" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        <input type="checkbox" id="edit-perm-manage" name="perm_manage_devices" value="1" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
                         <span>🖥️ Cho phép quản lý thiết bị (Unlink/Block)</span>
                     </label>
                     <label class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
-                        <input type="checkbox" id="edit-perm-sepay" name="perm_create_license" value="1" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        <input type="checkbox" id="edit-perm-sepay" name="perm_use_sepay" value="1" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
                         <span>💳 Cho phép kết nối cổng Sepay/PayOS riêng</span>
                     </label>
                 </div>
