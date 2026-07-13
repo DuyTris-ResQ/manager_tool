@@ -8,6 +8,15 @@ use Illuminate\Http\Request;
 
 class VersionController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (!auth()->user()->isSuperAdmin()) {
+                abort(403, 'Unauthorized access.');
+            }
+            return $next($request);
+        });
+    }
     public function index()
     {
         $versions = SoftwareVersion::orderBy('created_at', 'desc')->paginate(10);

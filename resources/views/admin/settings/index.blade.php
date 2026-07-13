@@ -6,12 +6,14 @@
 @section('content')
 <!-- Tab Navigation Header -->
 <div class="flex space-x-2 p-1.5 bg-slate-150/60 rounded-2xl w-full md:w-max mb-6">
+    @if(auth()->user()->isSuperAdmin())
     <button type="button" id="btn-tab-system" onclick="switchTab('system')"
         class="flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm bg-emerald-500 text-white">
         ⚙️ Cài đặt hệ thống
     </button>
+    @endif
     <button type="button" id="btn-tab-billing" onclick="switchTab('billing')"
-        class="flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-655 hover:bg-slate-100">
+        class="flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 {{ auth()->user()->isSuperAdmin() ? 'text-slate-655 hover:bg-slate-100' : 'shadow-sm bg-emerald-500 text-white' }}">
         💳 Thanh toán &amp; Liên hệ
     </button>
 </div>
@@ -20,6 +22,7 @@
     @csrf
 
     <!-- ════════════════════ TAB 1: SYSTEM SETTINGS ════════════════════ -->
+    @if(auth()->user()->isSuperAdmin())
     <div id="panel-tab-system" class="space-y-8">
         
         <!-- Core configurations (2-column layout) -->
@@ -103,9 +106,10 @@
             <p class="text-xs text-gray-400">{{ __('messages.telegram_help') }}</p>
         </div>
     </div>
+    @endif
 
     <!-- ════════════════════ TAB 2: BILLING & CONTACT ════════════════════ -->
-    <div id="panel-tab-billing" class="space-y-8 hidden">
+    <div id="panel-tab-billing" class="space-y-8 {{ auth()->user()->isSuperAdmin() ? 'hidden' : '' }}">
         
         <!-- Default Gateway Selector -->
         <div class="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 space-y-4">
@@ -372,16 +376,16 @@
         const panelSys = document.getElementById('panel-tab-system');
         const panelBill = document.getElementById('panel-tab-billing');
 
-        if (tabId === 'system') {
+        if (tabId === 'system' && btnSys) {
             btnSys.className = "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm bg-emerald-500 text-white";
             btnBill.className = "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-655 hover:bg-slate-100";
-            panelSys.classList.remove('hidden');
+            if (panelSys) panelSys.classList.remove('hidden');
             panelBill.classList.add('hidden');
         } else {
+            if (btnSys) btnSys.className = "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-655 hover:bg-slate-100";
             btnBill.className = "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 shadow-sm bg-emerald-500 text-white";
-            btnSys.className = "flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-655 hover:bg-slate-100";
             panelBill.classList.remove('hidden');
-            panelSys.classList.add('hidden');
+            if (panelSys) panelSys.classList.add('hidden');
         }
     }
 

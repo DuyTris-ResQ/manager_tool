@@ -10,7 +10,14 @@ class DeviceController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = Device::with('license');
+
+        if (!$user->isSuperAdmin()) {
+            $query->whereHas('license', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
 
         // Search spec, name or device id
         if ($request->search) {
@@ -32,11 +39,24 @@ class DeviceController extends Controller
         return view('admin.devices.index', compact('devices'));
     }
 
+    protected function checkOwnership(Device $device)
+    {
+        $user = auth()->user();
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        if (!$device->license_id || $device->license->user_id !== $user->id) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
     /**
      * Remove Device: Unlinks the device from its license.
      */
     public function remove(Device $device)
     {
+        $this->checkOwnership($device);
         $device->update(['license_id' => null]);
         return back()->with('success', "Device {$device->computer_name} unlinked from license successfully!");
     }
@@ -46,6 +66,7 @@ class DeviceController extends Controller
      */
     public function block(Device $device)
     {
+        $this->checkOwnership($device);
         $device->delete();
         return back()->with('success', "Device {$device->computer_name} blocked/removed successfully!");
     }

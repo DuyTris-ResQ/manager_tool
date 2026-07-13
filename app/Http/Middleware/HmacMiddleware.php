@@ -36,9 +36,9 @@ class HmacMiddleware
             return response()->json(['success' => false, 'message' => 'Missing authentication headers.'], 401);
         }
 
-        // Check timestamp is not too old (max 30 seconds)
+        // Check timestamp is not too old (max 120 seconds to allow for local dev/testing)
         $now = time();
-        if (abs($now - (int)$timestamp) > 30) {
+        if (abs($now - (int)$timestamp) > 120) {
             Log::warning('HMAC: Timestamp expired', [
                 'ip' => $request->ip(),
                 'timestamp' => $timestamp,

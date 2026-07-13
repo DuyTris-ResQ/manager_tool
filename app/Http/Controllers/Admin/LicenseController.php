@@ -13,7 +13,14 @@ class LicenseController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = License::withCount('devices');
+
+        if (!$user->isSuperAdmin()) {
+            $query->where('user_id', $user->id);
+        } else {
+            $query->with('user');
+        }
 
         // Search
         if ($request->search) {
@@ -26,19 +33,34 @@ class LicenseController extends Controller
         }
 
         $licenses = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+        
+        $users = [];
+        if ($user->isSuperAdmin()) {
+            $users = \App\Models\User::where('role', '!=', 'super_admin')->get();
+        }
 
-        return view('admin.licenses.index', compact('licenses'));
+        return view('admin.licenses.index', compact('licenses', 'users'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $user = auth()->user();
+        
+        $rules = [
             'max_devices' => 'required|integer|min:1',
             'duration_days' => 'required|integer|min:1',
             'status' => 'required|in:trial,active,disabled,banned',
-        ]);
+            'product_name' => 'nullable|string|max:255',
+        ];
+        
+        if ($user->isSuperAdmin()) {
+            $rules['user_id'] = 'nullable|exists:users,id';
+        }
+        
+        $request->validate($rules);
 
         $licenseKey = 'KEY-' . strtoupper(Str::random(16));
+        $userId = $user->isSuperAdmin() ? $request->user_id : $user->id;
 
         License::create([
             'license_key' => $licenseKey,
@@ -46,13 +68,24 @@ class LicenseController extends Controller
             'expire_at' => Carbon::now()->addDays((int) $request->duration_days),
             'max_devices' => $request->max_devices,
             'trial_start' => $request->status === 'trial' ? Carbon::now() : null,
+            'user_id' => $userId,
+            'product_name' => $request->product_name ?: null,
         ]);
 
         return back()->with('success', "License {$licenseKey} created successfully!");
     }
 
+    protected function checkOwnership(License $license)
+    {
+        if (!auth()->user()->isSuperAdmin() && $license->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+    }
+
     public function update(Request $request, License $license)
     {
+        $this->checkOwnership($license);
+        
         $request->validate([
             'status' => 'required|in:trial,active,expired,disabled,banned',
         ]);
@@ -64,6 +97,8 @@ class LicenseController extends Controller
 
     public function extend(Request $request, License $license)
     {
+        $this->checkOwnership($license);
+        
         $request->validate([
             'days' => 'required|integer|min:1',
         ]);
@@ -77,7 +112,6 @@ class LicenseController extends Controller
 
         $license->update([
             'expire_at' => $newExpire,
-            // If it was expired, we set it back to active or trial depending on original status
             'status' => ($license->status === 'expired' || $license->status === 'trial') ? 'active' : $license->status
         ]);
 
@@ -86,6 +120,8 @@ class LicenseController extends Controller
 
     public function changeMaxDevices(Request $request, License $license)
     {
+        $this->checkOwnership($license);
+        
         $request->validate([
             'max_devices' => 'required|integer|min:1',
         ]);
@@ -97,6 +133,8 @@ class LicenseController extends Controller
 
     public function quickUpdate(Request $request, License $license)
     {
+        $this->checkOwnership($license);
+        
         $request->validate([
             'status' => 'required|in:trial,active,expired,disabled,banned',
             'max_devices' => 'required|integer|min:1',
@@ -124,6 +162,8 @@ class LicenseController extends Controller
 
     public function destroy(License $license)
     {
+        $this->checkOwnership($license);
+        
         $license->delete();
         return back()->with('success', "License deleted successfully!");
     }

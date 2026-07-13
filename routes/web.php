@@ -57,6 +57,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings/update', [SettingController::class, 'update'])->name('settings.update');
 
+    // Users
+    Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
+    Route::post('/users/store', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('users.store');
+    Route::post('/users/{user}/update', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
+    Route::post('/users/{user}/delete', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
+
     // Logs
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
 });
@@ -64,12 +70,13 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 // Public Payment Route
 Route::get('/payment/pay/{order_code}', function ($order_code) {
     $order = Order::where('order_code', $order_code)->firstOrFail();
-    $gateway = \App\Models\Setting::get('payment_gateway', 'vietqr_only');
+    $license = $order->license;
+    $gateway = $license ? $license->getSetting('payment_gateway', 'vietqr_only') : 'vietqr_only';
 
-    if ($gateway === 'sepay') {
-        $merchantId = \App\Models\Setting::get('sepay_merchant_id', '');
-        $apiKey = \App\Models\Setting::get('sepay_api_key', '');
-        $env = \App\Models\Setting::get('sepay_env', 'sandbox');
+    if ($gateway === 'sepay' && $license) {
+        $merchantId = $license->getSetting('sepay_merchant_id', '');
+        $apiKey = $license->getSetting('sepay_api_key', '');
+        $env = $license->getSetting('sepay_env', 'sandbox');
 
         // Check if credentials are set
         if (!empty($merchantId) && !empty($apiKey)) {
@@ -92,9 +99,9 @@ Route::get('/payment/pay/{order_code}', function ($order_code) {
         }
     }
 
-    $bank_name = \App\Models\Setting::get('bank_name', 'MBBank');
-    $bank_account = \App\Models\Setting::get('bank_account', '');
-    $bank_holder = \App\Models\Setting::get('bank_holder', '');
+    $bank_name = $license ? $license->getSetting('bank_name', 'MBBank') : Setting::get('bank_name', 'MBBank');
+    $bank_account = $license ? $license->getSetting('bank_account', '') : Setting::get('bank_account', '');
+    $bank_holder = $license ? $license->getSetting('bank_holder', '') : Setting::get('bank_holder', '');
     return view('payment.simulate', compact('order', 'bank_name', 'bank_account', 'bank_holder'));
 })->name('payment.simulate');
 

@@ -10,75 +10,89 @@ class SettingController extends Controller
 {
     public function index()
     {
-        $settings = [
-            'maintenance'       => Setting::get('maintenance', '0'),
-            'minimum_version'   => Setting::get('minimum_version', '1.0.0'),
-            'notice'            => Setting::get('notice', ''),
-            'trial_days'        => Setting::get('trial_days', '3'),
-            'heartbeat_interval'=> Setting::get('heartbeat_interval', '300'),
+        $user = auth()->user();
+        $isSuper = $user->isSuperAdmin();
+
+        $keys = [
+            'maintenance'       => ['global' => true, 'default' => '0'],
+            'minimum_version'   => ['global' => true, 'default' => '1.0.0'],
+            'notice'            => ['global' => true, 'default' => ''],
+            'trial_days'        => ['global' => true, 'default' => '3'],
+            'heartbeat_interval'=> ['global' => true, 'default' => '300'],
 
             // PayOS Credentials
-            'payos_client_id'   => Setting::get('payos_client_id', ''),
-            'payos_api_key'     => Setting::get('payos_api_key', ''),
-            'payos_checksum_key'=> Setting::get('payos_checksum_key', ''),
+            'payos_client_id'   => ['global' => false, 'default' => ''],
+            'payos_api_key'     => ['global' => false, 'default' => ''],
+            'payos_checksum_key'=> ['global' => false, 'default' => ''],
 
             // SePay Credentials
-            'sepay_merchant_id' => Setting::get('sepay_merchant_id', ''),
-            'sepay_api_key'     => Setting::get('sepay_api_key', ''),
-            'sepay_env'         => Setting::get('sepay_env', 'sandbox'),
-            'payment_gateway'   => Setting::get('payment_gateway', 'vietqr_only'),
+            'sepay_merchant_id' => ['global' => false, 'default' => ''],
+            'sepay_api_key'     => ['global' => false, 'default' => ''],
+            'sepay_env'         => ['global' => false, 'default' => 'sandbox'],
+            'payment_gateway'   => ['global' => false, 'default' => 'vietqr_only'],
 
             // Pricing Packages – 4 fully configurable slots
-            'pkg_1_label'          => Setting::get('pkg_1_label', 'Gói tháng'),
-            'pkg_1_days'           => Setting::get('pkg_1_days', '30'),
-            'pkg_1_price'          => Setting::get('pkg_1_price', '150000'),
-            'pkg_1_price_original' => Setting::get('pkg_1_price_original', ''),
+            'pkg_1_label'          => ['global' => false, 'default' => 'Gói tháng'],
+            'pkg_1_days'           => ['global' => false, 'default' => '30'],
+            'pkg_1_price'          => ['global' => false, 'default' => '150000'],
+            'pkg_1_price_original' => ['global' => false, 'default' => ''],
 
-            'pkg_2_label'          => Setting::get('pkg_2_label', 'Gói quý'),
-            'pkg_2_days'           => Setting::get('pkg_2_days', '90'),
-            'pkg_2_price'          => Setting::get('pkg_2_price', '400000'),
-            'pkg_2_price_original' => Setting::get('pkg_2_price_original', ''),
+            'pkg_2_label'          => ['global' => false, 'default' => 'Gói quý'],
+            'pkg_2_days'           => ['global' => false, 'default' => '90'],
+            'pkg_2_price'          => ['global' => false, 'default' => '400000'],
+            'pkg_2_price_original' => ['global' => false, 'default' => ''],
 
-            'pkg_3_label'          => Setting::get('pkg_3_label', 'Gói năm'),
-            'pkg_3_days'           => Setting::get('pkg_3_days', '365'),
-            'pkg_3_price'          => Setting::get('pkg_3_price', '1500000'),
-            'pkg_3_price_original' => Setting::get('pkg_3_price_original', ''),
+            'pkg_3_label'          => ['global' => false, 'default' => 'Gói năm'],
+            'pkg_3_days'           => ['global' => false, 'default' => '365'],
+            'pkg_3_price'          => ['global' => false, 'default' => '1500000'],
+            'pkg_3_price_original' => ['global' => false, 'default' => ''],
 
-            'pkg_4_label'          => Setting::get('pkg_4_label', 'Vĩnh viễn'),
-            'pkg_4_days'           => Setting::get('pkg_4_days', '0'),
-            'pkg_4_price'          => Setting::get('pkg_4_price', '3000000'),
-            'pkg_4_price_original' => Setting::get('pkg_4_price_original', ''),
+            'pkg_4_label'          => ['global' => false, 'default' => 'Vĩnh viễn'],
+            'pkg_4_days'           => ['global' => false, 'default' => '0'],
+            'pkg_4_price'          => ['global' => false, 'default' => '3000000'],
+            'pkg_4_price_original' => ['global' => false, 'default' => ''],
 
             // Telegram Alerts
-            'telegram_bot_token' => Setting::get('telegram_bot_token', ''),
-            'telegram_chat_id'   => Setting::get('telegram_chat_id', ''),
+            'telegram_bot_token' => ['global' => false, 'default' => ''],
+            'telegram_chat_id'   => ['global' => false, 'default' => ''],
 
             // Bank details for VietQR
-            'bank_name'    => Setting::get('bank_name', ''),
-            'bank_bin'     => Setting::get('bank_bin', ''),
-            'bank_account' => Setting::get('bank_account', ''),
-            'bank_holder'  => Setting::get('bank_holder', ''),
+            'bank_name'    => ['global' => false, 'default' => ''],
+            'bank_bin'     => ['global' => false, 'default' => ''],
+            'bank_account' => ['global' => false, 'default' => ''],
+            'bank_holder'  => ['global' => false, 'default' => ''],
 
             // Contact & Support
-            'contact_phone'    => Setting::get('contact_phone', ''),
-            'contact_zalo'     => Setting::get('contact_zalo', ''),
-            'contact_facebook' => Setting::get('contact_facebook', ''),
-            'contact_email'    => Setting::get('contact_email', ''),
-            'contact_website'  => Setting::get('contact_website', ''),
-            'contact_note'     => Setting::get('contact_note', ''),
+            'contact_phone'    => ['global' => false, 'default' => ''],
+            'contact_zalo'     => ['global' => false, 'default' => ''],
+            'contact_facebook' => ['global' => false, 'default' => ''],
+            'contact_email'    => ['global' => false, 'default' => ''],
+            'contact_website'  => ['global' => false, 'default' => ''],
+            'contact_note'     => ['global' => false, 'default' => ''],
         ];
+
+        $settings = [];
+        foreach ($keys as $key => $meta) {
+            if ($meta['global']) {
+                $settings[$key] = Setting::get($key, $meta['default']);
+            } else {
+                if ($isSuper) {
+                    $settings[$key] = Setting::get($key, $meta['default']);
+                } else {
+                    $settings[$key] = $user->getSetting($key, $meta['default']);
+                }
+            }
+        }
+
         return view('admin.settings.index', compact('settings'));
     }
 
     public function update(Request $request)
     {
-        $request->validate([
-            'maintenance'        => 'required|in:0,1',
-            'minimum_version'    => 'required|string',
-            'notice'             => 'nullable|string',
-            'trial_days'         => 'required|integer|min:1',
-            'heartbeat_interval' => 'required|integer|min:30',
+        $user = auth()->user();
+        $isSuper = $user->isSuperAdmin();
 
+        $rules = [
             'payos_client_id'   => 'nullable|string',
             'payos_api_key'     => 'nullable|string',
             'payos_checksum_key'=> 'nullable|string',
@@ -122,44 +136,82 @@ class SettingController extends Controller
             'contact_email'    => 'nullable|string',
             'contact_website'  => 'nullable|string',
             'contact_note'     => 'nullable|string',
-        ]);
+        ];
 
-        Setting::set('maintenance',        $request->maintenance);
-        Setting::set('minimum_version',    $request->minimum_version);
-        Setting::set('notice',             $request->notice ?? '');
-        Setting::set('trial_days',         $request->trial_days);
-        Setting::set('heartbeat_interval', $request->heartbeat_interval);
-
-        Setting::set('payos_client_id',    $request->payos_client_id ?? '');
-        Setting::set('payos_api_key',      $request->payos_api_key ?? '');
-        Setting::set('payos_checksum_key', $request->payos_checksum_key ?? '');
-
-        Setting::set('sepay_merchant_id',  $request->sepay_merchant_id ?? '');
-        Setting::set('sepay_api_key',      $request->sepay_api_key ?? '');
-        Setting::set('sepay_env',          $request->sepay_env ?? 'sandbox');
-        Setting::set('payment_gateway',    $request->payment_gateway ?? 'vietqr_only');
-
-        foreach ([1, 2, 3, 4] as $n) {
-            Setting::set("pkg_{$n}_label",          $request->input("pkg_{$n}_label"));
-            Setting::set("pkg_{$n}_days",           $request->input("pkg_{$n}_days"));
-            Setting::set("pkg_{$n}_price",          $request->input("pkg_{$n}_price"));
-            Setting::set("pkg_{$n}_price_original", $request->input("pkg_{$n}_price_original") ?? '');
+        if ($isSuper) {
+            $rules = array_merge($rules, [
+                'maintenance'        => 'required|in:0,1',
+                'minimum_version'    => 'required|string',
+                'notice'             => 'nullable|string',
+                'trial_days'         => 'required|integer|min:1',
+                'heartbeat_interval' => 'required|integer|min:30',
+            ]);
         }
 
-        Setting::set('telegram_bot_token', $request->telegram_bot_token ?? '');
-        Setting::set('telegram_chat_id',   $request->telegram_chat_id ?? '');
+        $request->validate($rules);
 
-        Setting::set('bank_name',    $request->bank_name ?? '');
-        Setting::set('bank_bin',     $request->bank_bin ?? '');
-        Setting::set('bank_account', $request->bank_account ?? '');
-        Setting::set('bank_holder',  $request->bank_holder ?? '');
+        if ($isSuper) {
+            Setting::set('maintenance',        $request->maintenance);
+            Setting::set('minimum_version',    $request->minimum_version);
+            Setting::set('notice',             $request->notice ?? '');
+            Setting::set('trial_days',         $request->trial_days);
+            Setting::set('heartbeat_interval', $request->heartbeat_interval);
 
-        Setting::set('contact_phone',    $request->contact_phone ?? '');
-        Setting::set('contact_zalo',     $request->contact_zalo ?? '');
-        Setting::set('contact_facebook', $request->contact_facebook ?? '');
-        Setting::set('contact_email',    $request->contact_email ?? '');
-        Setting::set('contact_website',  $request->contact_website ?? '');
-        Setting::set('contact_note',     $request->contact_note ?? '');
+            Setting::set('payos_client_id',    $request->payos_client_id ?? '');
+            Setting::set('payos_api_key',      $request->payos_api_key ?? '');
+            Setting::set('payos_checksum_key', $request->payos_checksum_key ?? '');
+
+            Setting::set('sepay_merchant_id',  $request->sepay_merchant_id ?? '');
+            Setting::set('sepay_api_key',      $request->sepay_api_key ?? '');
+            Setting::set('sepay_env',          $request->sepay_env ?? 'sandbox');
+            Setting::set('payment_gateway',    $request->payment_gateway ?? 'vietqr_only');
+
+            foreach ([1, 2, 3, 4] as $n) {
+                Setting::set("pkg_{$n}_label",          $request->input("pkg_{$n}_label"));
+                Setting::set("pkg_{$n}_days",           $request->input("pkg_{$n}_days"));
+                Setting::set("pkg_{$n}_price",          $request->input("pkg_{$n}_price"));
+                Setting::set("pkg_{$n}_price_original", $request->input("pkg_{$n}_price_original") ?? '');
+            }
+
+            Setting::set('telegram_bot_token', $request->telegram_bot_token ?? '');
+            Setting::set('telegram_chat_id',   $request->telegram_chat_id ?? '');
+
+            Setting::set('bank_name',    $request->bank_name ?? '');
+            Setting::set('bank_bin',     $request->bank_bin ?? '');
+            Setting::set('bank_account', $request->bank_account ?? '');
+            Setting::set('bank_holder',  $request->bank_holder ?? '');
+
+            Setting::set('contact_phone',    $request->contact_phone ?? '');
+            Setting::set('contact_zalo',     $request->contact_zalo ?? '');
+            Setting::set('contact_facebook', $request->contact_facebook ?? '');
+            Setting::set('contact_email',    $request->contact_email ?? '');
+            Setting::set('contact_website',  $request->contact_website ?? '');
+            Setting::set('contact_note',     $request->contact_note ?? '');
+        } else {
+            $settings = $user->settings ?? [];
+
+            $keysToSave = [
+                'payos_client_id', 'payos_api_key', 'payos_checksum_key',
+                'sepay_merchant_id', 'sepay_api_key', 'sepay_env', 'payment_gateway',
+                'telegram_bot_token', 'telegram_chat_id',
+                'bank_name', 'bank_bin', 'bank_account', 'bank_holder',
+                'contact_phone', 'contact_zalo', 'contact_facebook', 'contact_email', 'contact_website', 'contact_note'
+            ];
+
+            foreach ([1, 2, 3, 4] as $n) {
+                $keysToSave[] = "pkg_{$n}_label";
+                $keysToSave[] = "pkg_{$n}_days";
+                $keysToSave[] = "pkg_{$n}_price";
+                $keysToSave[] = "pkg_{$n}_price_original";
+            }
+
+            foreach ($keysToSave as $k) {
+                $settings[$k] = $request->input($k) ?? '';
+            }
+
+            $user->settings = $settings;
+            $user->save();
+        }
 
         return back()->with('success', "Settings updated successfully!");
     }

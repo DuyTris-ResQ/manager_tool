@@ -29,6 +29,7 @@ class ApiController extends Controller
             'gpu' => 'nullable|string',
             'os' => 'nullable|string',
             'app_version' => 'nullable|string',
+            'product_name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -92,6 +93,13 @@ class ApiController extends Controller
             $license = $device->license;
         }
 
+        if ($license && $license->product_name && strtolower($license->product_name) !== strtolower($request->product_name)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This device is bound to a license valid only for application: ' . $license->product_name . '.',
+            ], 403);
+        }
+
         // 3. Return license info
         return response()->json([
             'success' => true,
@@ -117,6 +125,7 @@ class ApiController extends Controller
         $validator = Validator::make($request->all(), [
             'device_id' => 'required|string',
             'license_key' => 'nullable|string',
+            'product_name' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -155,6 +164,13 @@ class ApiController extends Controller
             if (!$license) {
                 return response()->json(['success' => false, 'message' => 'No license associated with this device.'], 404);
             }
+        }
+
+        if ($license->product_name && strtolower($license->product_name) !== strtolower($request->product_name)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This license key is only valid for application: ' . $license->product_name . '.',
+            ], 403);
         }
 
         $device->update(['last_online' => Carbon::now(), 'is_online' => true]);
@@ -347,7 +363,7 @@ class ApiController extends Controller
             'status' => 'pending',
         ]);
 
-        $gateway = Setting::get('payment_gateway', 'vietqr_only');
+        $gateway = $license->getSetting('payment_gateway', 'vietqr_only');
 
         $payment = Payment::create([
             'license_id' => $license->id,
@@ -423,11 +439,13 @@ class ApiController extends Controller
         $isSuccess = $isSePay || in_array(strtolower($status), ['success', 'completed', 'paid']);
 
         if ($isSuccess) {
+            $license = $payment->license;
+
             // Determine days to extend based on matching package price
             $daysToExtend = 30; // fallback default
             foreach ([1, 2, 3, 4] as $n) {
-                $pkgPrice = (int) Setting::get("pkg_{$n}_price", 0);
-                $pkgDays = (int) Setting::get("pkg_{$n}_days", 0);
+                $pkgPrice = (int) $license->getSetting("pkg_{$n}_price", 0);
+                $pkgDays = (int) $license->getSetting("pkg_{$n}_days", 0);
                 if ($pkgPrice > 0 && abs($pkgPrice - (int)$amount) < 10) {
                     $daysToExtend = $pkgDays;
                     break;
@@ -442,9 +460,6 @@ class ApiController extends Controller
             ]);
 
             $order->update(['status' => 'completed']);
-
-            // 3. Extend/Activate License
-            $license = $payment->license;
 
             if ($daysToExtend === 0) {
                 $newExpire = null; // Lifetime license
@@ -508,16 +523,22 @@ class ApiController extends Controller
      * GET /api/settings
      * Get public application settings.
      */
-    public function getSettings()
+    public function getSettings(Request $request)
     {
+        $licenseKey = $request->input('license_key');
+        $license = null;
+        if ($licenseKey) {
+            $license = License::where('license_key', $licenseKey)->first();
+        }
+
         $packages = [];
         foreach ([1, 2, 3, 4] as $n) {
-            $origRaw = Setting::get("pkg_{$n}_price_original", '');
+            $origRaw = $license ? $license->getSetting("pkg_{$n}_price_original", '') : Setting::get("pkg_{$n}_price_original", '');
             $packages[] = [
                 'key'            => "pkg_{$n}",
-                'label'          => Setting::get("pkg_{$n}_label", "Gói {$n}"),
-                'days'           => (int) Setting::get("pkg_{$n}_days", 30),
-                'price'          => (int) Setting::get("pkg_{$n}_price", 0),
+                'label'          => $license ? $license->getSetting("pkg_{$n}_label", "Gói {$n}") : Setting::get("pkg_{$n}_label", "Gói {$n}"),
+                'days'           => (int) ($license ? $license->getSetting("pkg_{$n}_days", 30) : Setting::get("pkg_{$n}_days", 30)),
+                'price'          => (int) ($license ? $license->getSetting("pkg_{$n}_price", 0) : Setting::get("pkg_{$n}_price", 0)),
                 'price_original' => $origRaw !== '' ? (int) $origRaw : null,
             ];
         }
@@ -530,17 +551,17 @@ class ApiController extends Controller
             'trial_days'         => (int) Setting::get('trial_days', 3),
             'heartbeat_interval' => (int) Setting::get('heartbeat_interval', 300),
             'packages'           => $packages,
-            'payment_gateway'    => Setting::get('payment_gateway', 'vietqr_only'),
-            'bank_name'          => Setting::get('bank_name', ''),
-            'bank_bin'           => Setting::get('bank_bin', ''),
-            'bank_account'       => Setting::get('bank_account', ''),
-            'bank_holder'        => Setting::get('bank_holder', ''),
-            'contact_phone'      => Setting::get('contact_phone', ''),
-            'contact_zalo'       => Setting::get('contact_zalo', ''),
-            'contact_facebook'   => Setting::get('contact_facebook', ''),
-            'contact_email'      => Setting::get('contact_email', ''),
-            'contact_website'    => Setting::get('contact_website', ''),
-            'contact_note'       => Setting::get('contact_note', ''),
+            'payment_gateway'    => $license ? $license->getSetting('payment_gateway', 'vietqr_only') : Setting::get('payment_gateway', 'vietqr_only'),
+            'bank_name'          => $license ? $license->getSetting('bank_name', '') : Setting::get('bank_name', ''),
+            'bank_bin'           => $license ? $license->getSetting('bank_bin', '') : Setting::get('bank_bin', ''),
+            'bank_account'       => $license ? $license->getSetting('bank_account', '') : Setting::get('bank_account', ''),
+            'bank_holder'        => $license ? $license->getSetting('bank_holder', '') : Setting::get('bank_holder', ''),
+            'contact_phone'      => $license ? $license->getSetting('contact_phone', '') : Setting::get('contact_phone', ''),
+            'contact_zalo'       => $license ? $license->getSetting('contact_zalo', '') : Setting::get('contact_zalo', ''),
+            'contact_facebook'   => $license ? $license->getSetting('contact_facebook', '') : Setting::get('contact_facebook', ''),
+            'contact_email'      => $license ? $license->getSetting('contact_email', '') : Setting::get('contact_email', ''),
+            'contact_website'    => $license ? $license->getSetting('contact_website', '') : Setting::get('contact_website', ''),
+            'contact_note'       => $license ? $license->getSetting('contact_note', '') : Setting::get('contact_note', ''),
         ]);
     }
 }

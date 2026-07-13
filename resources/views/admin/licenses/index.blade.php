@@ -37,6 +37,10 @@
             <thead>
                 <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase font-bold bg-gray-50/50">
                     <th class="p-4">{{ __('messages.licenses') }} Key</th>
+                    @if(auth()->user()->isSuperAdmin())
+                    <th class="p-4">Người sở hữu</th>
+                    @endif
+                    <th class="p-4">Ứng dụng (App)</th>
                     <th class="p-4">{{ __('messages.status') }}</th>
                     <th class="p-4">{{ __('messages.max_devices') }}</th>
                     <th class="p-4">{{ __('messages.expires_at') }}</th>
@@ -49,6 +53,19 @@
                         <td class="p-4">
                             <span class="font-mono font-bold text-gray-800 tracking-wider block">{{ $license->license_key }}</span>
                             <span class="text-[10px] text-gray-400">{{ __('messages.created') }}: {{ $license->created_at->format('Y-m-d H:i') }}</span>
+                        </td>
+                        @if(auth()->user()->isSuperAdmin())
+                        <td class="p-4">
+                            @if($license->user)
+                                <span class="font-semibold text-gray-800">{{ $license->user->name }}</span>
+                                <span class="text-[10px] text-gray-400 block">{{ $license->user->email }}</span>
+                            @else
+                                <span class="text-xs text-gray-400 italic">Hệ thống</span>
+                            @endif
+                        </td>
+                        @endif
+                        <td class="p-4 font-medium text-gray-700">
+                            {{ $license->product_name ?: 'Tất cả ứng dụng' }}
                         </td>
                         <td class="p-4">
                             @if($license->status === 'active')
@@ -148,6 +165,11 @@
             </div>
 
             <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tên ứng dụng / App Name <span class="text-gray-400 font-normal">(để trống nếu dùng chung)</span></label>
+                <input type="text" name="product_name" class="w-full px-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm" placeholder="Ví dụ: toolvideo">
+            </div>
+
+            <div>
                 <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">{{ __('messages.initial_status') }}</label>
                 <select name="status" class="w-full px-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm bg-white">
                     <option value="active">{{ __('messages.active') }}</option>
@@ -155,6 +177,18 @@
                     <option value="disabled">{{ __('messages.disabled') }}</option>
                 </select>
             </div>
+
+            @if(auth()->user()->isSuperAdmin())
+            <div>
+                <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Người sở hữu (Owner)</label>
+                <select name="user_id" class="w-full px-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm bg-white">
+                    <option value="">-- Hệ thống (Không gán) --</option>
+                    @foreach($users as $u)
+                        <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
 
             <div class="flex space-x-3 pt-2">
                 <button type="button" onclick="closeModal('create-license-modal')" class="flex-1 py-3 text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors">{{ __('messages.cancel') }}</button>

@@ -14,14 +14,40 @@ class License extends Model
         'status',
         'trial_start',
         'expire_at',
-        'max_devices'
+        'max_devices',
+        'user_id',
+        'product_name'
     ];
 
     protected $casts = [
         'trial_start' => 'datetime',
         'expire_at' => 'datetime',
         'max_devices' => 'integer',
+        'user_id' => 'integer',
+        'product_name' => 'string',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Resolve a setting, prioritizing the owner user's settings, falling back to global settings.
+     */
+    public function getSetting(string $key, $default = null)
+    {
+        if ($this->user_id) {
+            $user = $this->user;
+            if ($user) {
+                $val = $user->getSetting($key);
+                if ($val !== null && $val !== '') {
+                    return $val;
+                }
+            }
+        }
+        return Setting::get($key, $default);
+    }
 
     public function devices()
     {

@@ -19,4 +19,12 @@ class Log extends Model
     protected $casts = [
         'details' => 'array'
     ];
+
+    /**
+     * Get the device associated with this log.
+     */
+    public function device()
+    {
+        return $this->belongsTo(Device::class, 'device_id', 'device_id');
+    }
 }

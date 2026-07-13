@@ -8,6 +8,7 @@ return [
     'versions' => 'Phiên bản',
     'settings' => 'Cài đặt',
     'logs' => 'Nhật ký',
+    'users' => 'Người dùng',
     
     // Statuses
     'active' => 'Kích hoạt',

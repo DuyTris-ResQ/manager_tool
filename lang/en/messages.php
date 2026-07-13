@@ -8,6 +8,7 @@ return [
     'versions' => 'Versions',
     'settings' => 'Settings',
     'logs' => 'Logs',
+    'users' => 'Users',
     
     // Statuses
     'active' => 'Active',

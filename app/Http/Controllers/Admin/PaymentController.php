@@ -10,11 +10,20 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
         $query = Payment::with('license');
 
+        if (!$user->isSuperAdmin()) {
+            $query->whereHas('license', function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+
         if ($request->search) {
-            $query->where('order_code', 'like', "%{$request->search}%")
+            $query->where(function ($q) use ($request) {
+                $q->where('order_code', 'like', "%{$request->search}%")
                   ->orWhere('transaction_code', 'like', "%{$request->search}%");
+            });
         }
 
         if ($request->status) {

@@ -20,6 +20,17 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Administrator',
                 'password' => Hash::make('admin'),
+                'role' => 'super_admin',
+            ]
+        );
+
+        // Create Default Test User
+        User::updateOrCreate(
+            ['email' => 'user@gmail.com'],
+            [
+                'name' => 'Test User',
+                'password' => Hash::make('user123'),
+                'role' => 'user',
             ]
         );
 
