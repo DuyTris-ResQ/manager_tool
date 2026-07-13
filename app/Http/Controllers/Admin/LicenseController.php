@@ -59,8 +59,21 @@ class LicenseController extends Controller
         
         $request->validate($rules);
 
-        $licenseKey = 'KEY-' . strtoupper(Str::random(16));
         $userId = $user->isSuperAdmin() ? $request->user_id : $user->id;
+        $targetUser = $userId ? User::find($userId) : null;
+
+        // Enforce permissions and max license limits
+        if ($targetUser && !$targetUser->isSuperAdmin()) {
+            if (!$targetUser->hasPermission('can_create_license')) {
+                return back()->with('error', 'Tài khoản người sở hữu không được cấp quyền tạo Giấy phép.');
+            }
+
+            if ($targetUser->max_licenses > 0 && $targetUser->licenses()->count() >= $targetUser->max_licenses) {
+                return back()->with('error', 'Tài khoản người sở hữu đã đạt giới hạn số lượng Giấy phép tối đa (' . $targetUser->max_licenses . ').');
+            }
+        }
+
+        $licenseKey = 'KEY-' . strtoupper(Str::random(16));
 
         License::create([
             'license_key' => $licenseKey,

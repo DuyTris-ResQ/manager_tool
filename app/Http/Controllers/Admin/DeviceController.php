@@ -46,6 +46,10 @@ class DeviceController extends Controller
             return;
         }
 
+        if (!$user->hasPermission('can_manage_devices')) {
+            abort(403, 'Tài khoản của bạn không được cấp quyền quản lý thiết bị.');
+        }
+
         if (!$device->license_id || $device->license->user_id !== $user->id) {
             abort(403, 'Unauthorized action.');
         }

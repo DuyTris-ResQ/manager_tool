@@ -41,13 +41,24 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
             'role' => 'required|in:super_admin,user',
+            'max_licenses' => 'required|integer|min:0',
+            'is_active' => 'required|boolean',
         ]);
+
+        $permissions = [
+            'can_create_license' => $request->has('perm_create_license'),
+            'can_manage_devices' => $request->has('perm_manage_devices'),
+            'can_use_sepay' => $request->has('perm_use_sepay'),
+        ];
 
         User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
+            'max_licenses' => (int) $request->max_licenses,
+            'is_active' => (bool) $request->is_active,
+            'permissions' => $permissions,
         ]);
 
         return back()->with('success', 'User created successfully!');
@@ -59,6 +70,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'role' => 'required|in:super_admin,user',
+            'max_licenses' => 'required|integer|min:0',
+            'is_active' => 'required|boolean',
         ];
 
         if ($request->filled('password')) {
@@ -67,10 +80,19 @@ class UserController extends Controller
 
         $request->validate($rules);
 
+        $permissions = [
+            'can_create_license' => $request->has('perm_create_license'),
+            'can_manage_devices' => $request->has('perm_manage_devices'),
+            'can_use_sepay' => $request->has('perm_use_sepay'),
+        ];
+
         $updateData = [
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'max_licenses' => (int) $request->max_licenses,
+            'is_active' => (bool) $request->is_active,
+            'permissions' => $permissions,
         ];
 
         if ($request->filled('password')) {

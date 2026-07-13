@@ -23,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \App\Http\Middleware\HmacMiddleware::class,
         ]);
+        $middleware->alias([
+            'active_user' => \App\Http\Middleware\CheckUserActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

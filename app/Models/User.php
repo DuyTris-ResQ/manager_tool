@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'settings'])]
+#[Fillable(['name', 'email', 'password', 'role', 'settings', 'permissions', 'is_active', 'max_licenses'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,6 +28,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'settings' => 'array',
+            'permissions' => 'array',
+            'is_active' => 'boolean',
+            'max_licenses' => 'integer',
         ];
     }
 
@@ -49,6 +52,18 @@ class User extends Authenticatable
         $settings[$key] = $value;
         $this->settings = $settings;
         $this->save();
+    }
+
+    /**
+     * Check if the user has a specific permission.
+     */
+    public function hasPermission(string $permission, bool $default = true): bool
+    {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+        $permissions = $this->permissions ?? [];
+        return isset($permissions[$permission]) ? (bool) $permissions[$permission] : $default;
     }
 
     /**

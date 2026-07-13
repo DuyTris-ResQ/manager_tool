@@ -27,8 +27,8 @@ Route::get('/admin/login', [AuthController::class, 'showLogin'])->name('admin.lo
 Route::post('/admin/login', [AuthController::class, 'login'])->name('admin.login.submit');
 Route::post('/admin/logout', [AuthController::class, 'logout'])->name('admin.logout');
 
-// Admin Dashboard Routes (Protected by auth)
-Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+// Admin Dashboard Routes (Protected by auth and active check)
+Route::middleware(['auth', 'active_user'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Licenses
