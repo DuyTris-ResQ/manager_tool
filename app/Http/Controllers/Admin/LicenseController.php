@@ -180,4 +180,78 @@ class LicenseController extends Controller
         $license->delete();
         return back()->with('success', "License deleted successfully!");
     }
+
+    public function bulkAction(Request $request)
+    {
+        $user = auth()->user();
+        $action = $request->input('action');
+        $ids = $request->input('ids', []);
+
+        if (empty($ids)) {
+            return back()->with('error', 'Vui lòng chọn ít nhất một bản quyền để thực hiện.');
+        }
+
+        $query = License::whereIn('id', $ids);
+        if (!$user->isSuperAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        $resolvedLicenses = $query->get();
+
+        if ($action === 'delete') {
+            foreach ($resolvedLicenses as $lic) {
+                $lic->devices()->update(['license_id' => null]);
+                $lic->delete();
+            }
+            return back()->with('success', 'Đã xóa hàng loạt ' . count($resolvedLicenses) . ' bản quyền thành công.');
+        }
+
+        if ($action === 'unlink') {
+            foreach ($resolvedLicenses as $lic) {
+                $lic->devices()->update(['license_id' => null]);
+            }
+            return back()->with('success', 'Đã gỡ thiết bị hàng loạt cho ' . count($resolvedLicenses) . ' bản quyền.');
+        }
+
+        if ($action === 'export_txt') {
+            $content = "";
+            foreach ($resolvedLicenses as $lic) {
+                $content .= $lic->license_key . "\r\n";
+            }
+            return response($content, 200, [
+                'Content-Type' => 'text/plain; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="licenses_' . date('Ymd_His') . '.txt"',
+            ]);
+        }
+
+        if ($action === 'export_csv') {
+            $headers = [
+                'Content-Type' => 'text/csv; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="licenses_' . date('Ymd_His') . '.csv"',
+            ];
+            $callback = function() use ($resolvedLicenses) {
+                $file = fopen('php://output', 'w');
+                // UTF-8 BOM to prevent excel issues
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+                
+                fputcsv($file, ['License Key', 'App/Product', 'Status', 'Devices Count', 'Max Devices', 'Owner', 'Expires At', 'Created At']);
+                foreach ($resolvedLicenses as $lic) {
+                    fputcsv($file, [
+                        $lic->license_key,
+                        $lic->product_name ?: 'All',
+                        $lic->status,
+                        $lic->devices()->count(),
+                        $lic->max_devices,
+                        $lic->user ? $lic->user->name : 'System',
+                        $lic->expire_at ? $lic->expire_at->toDateTimeString() : 'Lifetime',
+                        $lic->created_at->toDateTimeString()
+                    ]);
+                }
+                fclose($file);
+            };
+            return response()->stream($callback, 200, $headers);
+        }
+
+        return back()->with('error', 'Hành động không hợp lệ.');
+    }
 }

@@ -30,13 +30,42 @@
     </button>
 </div>
 
-<!-- License Table Card -->
-<div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-6">
-    <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase font-bold bg-gray-50/50">
-                    <th class="p-4">{{ __('messages.licenses') }} Key</th>
+<!-- Bulk Actions Toolbar (Hidden by default, shown when items selected) -->
+<div id="bulk-actions-toolbar" class="bg-emerald-50 border border-emerald-100 rounded-3xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 hidden">
+    <div class="flex items-center space-x-2 text-sm text-emerald-800 font-medium">
+        <span>🎉</span>
+        <span>Đã chọn <strong id="selected-count" class="text-base text-emerald-600">0</strong> mục bản quyền.</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+        <button type="button" onclick="submitBulkAction('export_txt')" class="px-4 py-2 text-xs font-bold rounded-2xl border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-100/50 transition-all flex items-center space-x-1">
+            <span>📥</span> <span>Xuất TXT</span>
+        </button>
+        <button type="button" onclick="submitBulkAction('export_csv')" class="px-4 py-2 text-xs font-bold rounded-2xl border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-100/50 transition-all flex items-center space-x-1">
+            <span>📊</span> <span>Xuất CSV</span>
+        </button>
+        <button type="button" onclick="submitBulkAction('unlink')" class="px-4 py-2 text-xs font-bold rounded-2xl border border-amber-300 text-amber-700 bg-white hover:bg-amber-100/50 transition-all flex items-center space-x-1">
+            <span>🖥️</span> <span>Gỡ thiết bị</span>
+        </button>
+        <button type="button" onclick="submitBulkAction('delete')" class="px-4 py-2 text-xs font-bold rounded-2xl bg-rose-500 text-white hover:bg-rose-600 shadow-md shadow-rose-200 transition-all flex items-center space-x-1">
+            <span>🗑️</span> <span>Xóa đã chọn</span>
+        </button>
+    </div>
+</div>
+
+<form id="bulk-action-form" action="{{ route('admin.licenses.bulk_action') }}" method="POST">
+    @csrf
+    <input type="hidden" id="bulk-action-type" name="action" value="">
+
+    <!-- License Table Card -->
+    <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase font-bold bg-gray-50/50">
+                        <th class="p-4 w-10">
+                            <input type="checkbox" id="select-all-licenses" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        </th>
+                        <th class="p-4">{{ __('messages.licenses') }} Key</th>
                     @if(auth()->user()->isSuperAdmin())
                     <th class="p-4">Người sở hữu</th>
                     @endif
@@ -50,6 +79,9 @@
             <tbody class="divide-y divide-gray-50 text-sm">
                 @forelse($licenses as $license)
                     <tr class="hover:bg-gray-50/30 transition-colors">
+                        <td class="p-4">
+                            <input type="checkbox" name="ids[]" value="{{ $license->id }}" class="license-checkbox rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        </td>
                         <td class="p-4">
                             <span class="font-mono font-bold text-gray-800 tracking-wider block">{{ $license->license_key }}</span>
                             <span class="text-[10px] text-gray-400">{{ __('messages.created') }}: {{ $license->created_at->format('Y-m-d H:i') }}</span>
@@ -127,13 +159,14 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="p-8 text-center text-gray-400">{{ __('messages.no_data') }}</td>
+                        <td colspan="8" class="p-8 text-center text-gray-450">{{ __('messages.no_data') }}</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 </div>
+</form>
 
 <!-- Pagination -->
 <div class="mt-4">
@@ -328,5 +361,70 @@
             el.classList.add('hidden');
         });
     });
+
+    // Bulk actions checkboxes handling
+    const selectAllCheckbox = document.getElementById('select-all-licenses');
+    const licenseCheckboxes = document.querySelectorAll('.license-checkbox');
+    const bulkToolbar = document.getElementById('bulk-actions-toolbar');
+    const selectedCountLabel = document.getElementById('selected-count');
+
+    function updateBulkToolbar() {
+        const checkedCount = document.querySelectorAll('.license-checkbox:checked').length;
+        if (selectedCountLabel) {
+            selectedCountLabel.innerText = checkedCount;
+        }
+        if (bulkToolbar) {
+            if (checkedCount > 0) {
+                bulkToolbar.classList.remove('hidden');
+            } else {
+                bulkToolbar.classList.add('hidden');
+            }
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            licenseCheckboxes.forEach(cb => {
+                cb.checked = isChecked;
+            });
+            updateBulkToolbar();
+        });
+    }
+
+    licenseCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const total = licenseCheckboxes.length;
+            const checked = document.querySelectorAll('.license-checkbox:checked').length;
+            
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = (total === checked);
+                selectAllCheckbox.indeterminate = (checked > 0 && checked < total);
+            }
+            updateBulkToolbar();
+        });
+    });
+
+    function submitBulkAction(actionType) {
+        const checkedCount = document.querySelectorAll('.license-checkbox:checked').length;
+        if (checkedCount === 0) {
+            alert('Vui lòng chọn ít nhất một bản quyền.');
+            return;
+        }
+
+        let confirmMsg = '';
+        if (actionType === 'delete') {
+            confirmMsg = 'Bạn có chắc chắn muốn xóa ' + checkedCount + ' bản quyền đã chọn? Thiết bị đang liên kết sẽ bị gỡ ra.';
+        } else if (actionType === 'unlink') {
+            confirmMsg = 'Bạn có chắc chắn muốn gỡ thiết bị cho ' + checkedCount + ' bản quyền đã chọn?';
+        }
+
+        if (confirmMsg && !confirm(confirmMsg)) {
+            return;
+        }
+
+        document.getElementById('bulk-action-type').value = actionType;
+        document.getElementById('bulk-action-form').submit();
+    }
 </script>
 @endsection

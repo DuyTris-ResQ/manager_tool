@@ -39,6 +39,7 @@ Route::middleware(['auth', 'active_user'])->prefix('admin')->name('admin.')->gro
     Route::post('/licenses/{license}/max-devices', [LicenseController::class, 'changeMaxDevices'])->name('licenses.max_devices');
     Route::post('/licenses/{license}/quick-update', [LicenseController::class, 'quickUpdate'])->name('licenses.quick_update');
     Route::post('/licenses/{license}/delete', [LicenseController::class, 'destroy'])->name('licenses.destroy');
+    Route::post('/licenses/bulk-action', [LicenseController::class, 'bulkAction'])->name('licenses.bulk_action');
 
     // Devices
     Route::get('/devices', [DeviceController::class, 'index'])->name('devices.index');
