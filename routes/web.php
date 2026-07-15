@@ -45,6 +45,7 @@ Route::middleware(['auth', 'active_user'])->prefix('admin')->name('admin.')->gro
     Route::get('/devices', [DeviceController::class, 'index'])->name('devices.index');
     Route::post('/devices/{device}/remove', [DeviceController::class, 'remove'])->name('devices.remove');
     Route::post('/devices/{device}/block', [DeviceController::class, 'block'])->name('devices.block');
+    Route::post('/devices/bulk-action', [DeviceController::class, 'bulkAction'])->name('devices.bulk_action');
 
     // Payments
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -57,15 +58,19 @@ Route::middleware(['auth', 'active_user'])->prefix('admin')->name('admin.')->gro
     // Settings
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::post('/settings/update', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/check-sepay', [SettingController::class, 'checkSepay'])->name('settings.check_sepay');
 
     // Users
     Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
+    Route::get('/users/{user}/details', [\App\Http\Controllers\Admin\UserController::class, 'details'])->name('users.details');
     Route::post('/users/store', [\App\Http\Controllers\Admin\UserController::class, 'store'])->name('users.store');
     Route::post('/users/{user}/update', [\App\Http\Controllers\Admin\UserController::class, 'update'])->name('users.update');
     Route::post('/users/{user}/delete', [\App\Http\Controllers\Admin\UserController::class, 'destroy'])->name('users.destroy');
 
     // Logs
     Route::get('/logs', [LogController::class, 'index'])->name('logs.index');
+    Route::post('/logs/clear', [LogController::class, 'clear'])->name('logs.clear');
+    Route::post('/logs/{log}/delete', [LogController::class, 'destroy'])->name('logs.destroy');
 });
 
 // Public Payment Route

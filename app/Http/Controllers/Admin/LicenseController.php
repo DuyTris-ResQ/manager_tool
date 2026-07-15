@@ -22,9 +22,32 @@ class LicenseController extends Controller
             $query->with('user');
         }
 
-        // Search
+        // Smart Search
         if ($request->search) {
-            $query->where('license_key', 'like', "%{$request->search}%");
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('license_key', 'like', "%{$search}%")
+                  ->orWhere('product_name', 'like', "%{$search}%")
+                  ->orWhereHas('user', function ($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                         ->orWhere('email', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('devices', function ($dq) use ($search) {
+                      $dq->where('device_id', 'like', "%{$search}%")
+                         ->orWhere('computer_name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Product Name filter
+        if ($request->product_name) {
+            if ($request->product_name === 'default') {
+                $query->where(function($q) {
+                    $q->whereNull('product_name')->orWhere('product_name', '');
+                });
+            } else {
+                $query->where('product_name', $request->product_name);
+            }
         }
 
         // Status filter
@@ -34,12 +57,19 @@ class LicenseController extends Controller
 
         $licenses = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
         
+        // Get all unique product names for filter dropdown
+        $allProductsQuery = License::select('product_name')->distinct();
+        if (!$user->isSuperAdmin()) {
+            $allProductsQuery->where('user_id', $user->id);
+        }
+        $products = $allProductsQuery->whereNotNull('product_name')->where('product_name', '!=', '')->pluck('product_name')->toArray();
+
         $users = [];
         if ($user->isSuperAdmin()) {
             $users = \App\Models\User::where('role', '!=', 'super_admin')->get();
         }
 
-        return view('admin.licenses.index', compact('licenses', 'users'));
+        return view('admin.licenses.index', compact('licenses', 'users', 'products'));
     }
 
     public function store(Request $request)

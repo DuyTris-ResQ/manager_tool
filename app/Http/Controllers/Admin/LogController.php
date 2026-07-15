@@ -34,4 +34,32 @@ class LogController extends Controller
 
         return view('admin.logs.index', compact('logs'));
     }
+
+    public function destroy(ClientLog $log)
+    {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin()) {
+            if (!$log->device_id) {
+                abort(403, 'Unauthorized action.');
+            }
+            $device = \App\Models\Device::where('device_id', $log->device_id)->first();
+            if (!$device || !$device->license_id || $device->license->user_id !== $user->id) {
+                abort(403, 'Unauthorized action.');
+            }
+        }
+
+        $log->delete();
+        return back()->with('success', 'Xóa nhật ký thành công!');
+    }
+
+    public function clear()
+    {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can clear logs.');
+        }
+
+        ClientLog::truncate();
+        return back()->with('success', 'Đã xóa toàn bộ nhật ký hệ thống!');
+    }
 }

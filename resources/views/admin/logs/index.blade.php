@@ -23,6 +23,16 @@
             {{ __('messages.filter') }}
         </button>
     </form>
+
+    @if(auth()->user()->isSuperAdmin())
+    <form action="{{ route('admin.logs.clear') }}" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa toàn bộ nhật ký hệ thống?')">
+        @csrf
+        <button type="submit" class="px-5 py-2.5 text-sm font-bold rounded-2xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center justify-center space-x-1">
+            <span>🗑️</span>
+            <span>Xóa toàn bộ nhật ký</span>
+        </button>
+    </form>
+    @endif
 </div>
 
 <!-- Logs Table Card -->
@@ -64,11 +74,19 @@
                             {{ $log->message }}
                         </td>
                         <td class="p-4 text-right">
-                            @if($log->details)
-                                <button onclick="viewDetailsModal('{{ addslashes($log->message) }}', '{{ json_encode($log->details) }}')" class="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">{{ __('messages.view_details') }}</button>
-                            @else
-                                <span class="text-gray-400 text-xs italic">{{ __('messages.no_details') }}</span>
-                            @endif
+                            <div class="flex items-center justify-end space-x-1.5">
+                                @if($log->details)
+                                    <button onclick="viewDetailsModal('{{ addslashes($log->message) }}', '{{ json_encode($log->details) }}')" class="px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">{{ __('messages.view_details') }}</button>
+                                @else
+                                    <span class="text-gray-400 text-xs italic">{{ __('messages.no_details') }}</span>
+                                @endif
+                                <form action="{{ route('admin.logs.destroy', $log->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Bạn có chắc chắn muốn xóa dòng nhật ký này?')">
+                                    @csrf
+                                    <button type="submit" class="p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-xl transition-colors" title="Xóa dòng log">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty

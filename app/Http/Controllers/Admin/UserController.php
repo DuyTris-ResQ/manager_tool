@@ -104,6 +104,45 @@ class UserController extends Controller
         return back()->with('success', 'User updated successfully!');
     }
 
+    public function details(User $user)
+    {
+        $licenses = $user->licenses()->withCount('devices')->orderBy('created_at', 'desc')->get();
+        
+        $totalLicenses = $licenses->count();
+        $totalDevices = 0;
+        foreach ($licenses as $lic) {
+            $totalDevices += $lic->devices_count;
+        }
+
+        $formattedLicenses = $licenses->map(function ($lic) {
+            return [
+                'license_key' => $lic->license_key,
+                'status' => $lic->status,
+                'expire_at' => $lic->expire_at ? $lic->expire_at->format('Y-m-d H:i') : 'Vĩnh viễn',
+                'product_name' => $lic->product_name ?: 'Dùng chung',
+                'devices_count' => $lic->devices_count,
+                'max_devices' => $lic->max_devices,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'is_active' => $user->is_active,
+                'max_licenses' => $user->max_licenses,
+                'created_at' => $user->created_at->format('Y-m-d H:i'),
+            ],
+            'stats' => [
+                'total_licenses' => $totalLicenses,
+                'total_devices' => $totalDevices,
+            ],
+            'licenses' => $formattedLicenses,
+        ]);
+    }
+
     public function destroy(User $user)
     {
         // Don't allow self deletion

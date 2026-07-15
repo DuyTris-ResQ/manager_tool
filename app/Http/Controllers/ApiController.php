@@ -30,6 +30,7 @@ class ApiController extends Controller
             'os' => 'nullable|string',
             'app_version' => 'nullable|string',
             'product_name' => 'nullable|string',
+            'license_key' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -67,7 +68,29 @@ class ApiController extends Controller
             ]);
         }
 
-        // 2. Check if device is linked to a license
+        // 2. Check and link license_key from request if provided
+        if ($request->filled('license_key')) {
+            $inputLicenseKey = trim($request->license_key);
+            $newLicense = License::where('license_key', $inputLicenseKey)->first();
+            if ($newLicense) {
+                if ($device->license_id !== $newLicense->id) {
+                    // Cho phép liên kết nếu key mới không bị block (banned/disabled) và chưa vượt quá giới hạn thiết bị
+                    if (!in_array($newLicense->status, ['banned', 'disabled'])) {
+                        if ($newLicense->devices()->count() < $newLicense->max_devices) {
+                            $device->update(['license_id' => $newLicense->id]);
+                            
+                            ClientLog::create([
+                                'device_id' => $device->device_id,
+                                'type' => 'activate',
+                                'message' => "Auto-linked to new license: {$newLicense->license_key} via auth API",
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Check if device is linked to a license
         if (!$device->license_id) {
             // Auto generate trial license
             $trialDays = (int) Setting::get('trial_days', 3);
@@ -90,7 +113,7 @@ class ApiController extends Controller
                 'message' => "Auto-created trial license: {$licenseKey}",
             ]);
         } else {
-            $license = $device->license;
+            $license = $device->license()->first();
         }
 
         if ($license && $license->product_name && strtolower($license->product_name) !== strtolower($request->product_name)) {

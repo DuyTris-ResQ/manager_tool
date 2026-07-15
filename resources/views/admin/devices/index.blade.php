@@ -15,11 +15,40 @@
             <option value="0" {{ request('online') === '0' ? 'selected' : '' }}>{{ __('messages.offline_only') }}</option>
         </select>
 
+        <select name="product_name" class="px-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm bg-white">
+            <option value="">{{ __('Tất cả ứng dụng') }}</option>
+            <option value="default" {{ request('product_name') === 'default' ? 'selected' : '' }}>Dùng chung (Không chỉ định)</option>
+            @foreach($products as $prod)
+                <option value="{{ $prod }}" {{ request('product_name') === $prod ? 'selected' : '' }}>{{ $prod }}</option>
+            @endforeach
+        </select>
+
         <button type="submit" class="px-5 py-2.5 text-sm font-bold rounded-2xl border border-emerald-500 text-emerald-600 bg-white hover:bg-emerald-50 transition-colors">
             {{ __('messages.filter') }}
         </button>
     </form>
 </div>
+
+<!-- Bulk Actions Toolbar (Hidden by default) -->
+<div id="bulk-actions-toolbar" class="bg-emerald-50 border border-emerald-100 rounded-3xl p-4 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 hidden">
+    <div class="flex items-center space-x-2 text-sm text-emerald-800 font-medium">
+        <span>🖥️</span>
+        <span>Đã chọn <strong id="selected-count" class="text-base text-emerald-600">0</strong> thiết bị.</span>
+    </div>
+    <div class="flex items-center gap-2">
+        <button type="button" onclick="submitBulkAction('unlink')" class="px-4 py-2.5 text-xs font-bold rounded-2xl border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-100/50 transition-all flex items-center space-x-1">
+            <span>🔗</span> <span>Gỡ liên kết hàng loạt</span>
+        </button>
+        <button type="button" onclick="submitBulkAction('delete')" class="px-4 py-2.5 text-xs font-bold rounded-2xl bg-red-500 text-white hover:bg-red-600 shadow-sm transition-all flex items-center space-x-1">
+            <span>🗑️</span> <span>Xóa/Block hàng loạt</span>
+        </button>
+    </div>
+</div>
+
+<form id="bulk-action-form" action="{{ route('admin.devices.bulk_action') }}" method="POST" class="hidden">
+    @csrf
+    <input type="hidden" name="action" id="bulk-action-val">
+</form>
 
 <!-- Devices Table Card -->
 <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden mb-6">
@@ -27,6 +56,7 @@
         <table class="w-full text-left border-collapse">
             <thead>
                 <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase font-bold bg-gray-50/50">
+                    <th class="p-4 w-12"><input type="checkbox" id="check-all" class="rounded border-gray-300 text-emerald-500 focus:ring-emerald-500"></th>
                     <th class="p-4">{{ __('messages.device_info') }}</th>
                     <th class="p-4">{{ __('messages.specs') }}</th>
                     <th class="p-4">{{ __('messages.connection_version') }}</th>
@@ -37,6 +67,9 @@
             <tbody class="divide-y divide-gray-50 text-sm">
                 @forelse($devices as $device)
                     <tr class="hover:bg-gray-50/30 transition-colors">
+                        <td class="p-4 w-12">
+                            <input type="checkbox" name="device_ids[]" value="{{ $device->id }}" class="device-checkbox rounded border-gray-300 text-emerald-500 focus:ring-emerald-500">
+                        </td>
                         <td class="p-4">
                             <span class="font-bold text-gray-800 block text-base">{{ $device->computer_name }}</span>
                             <span class="font-mono text-[10px] text-gray-400 block mt-0.5 select-all" title="{{ $device->device_id }}">
@@ -120,7 +153,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="p-8 text-center text-gray-400">{{ __('messages.no_devices') }}</td>
+                        <td colspan="6" class="p-8 text-center text-gray-400">{{ __('messages.no_devices') }}</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -207,5 +240,72 @@
             el.classList.add('hidden');
         });
     });
+
+    // ════════════════════ BULK ACTIONS ════════════════════
+    const checkAll = document.getElementById('check-all');
+    const deviceCheckboxes = document.querySelectorAll('.device-checkbox');
+    const bulkToolbar = document.getElementById('bulk-actions-toolbar');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const bulkForm = document.getElementById('bulk-action-form');
+    const bulkActionVal = document.getElementById('bulk-action-val');
+
+    function updateBulkToolbar() {
+        const checkedBoxes = document.querySelectorAll('.device-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        if (count > 0) {
+            selectedCountSpan.textContent = count;
+            bulkToolbar.classList.remove('hidden');
+        } else {
+            bulkToolbar.classList.add('hidden');
+        }
+    }
+
+    if (checkAll) {
+        checkAll.addEventListener('change', function() {
+            deviceCheckboxes.forEach(cb => {
+                cb.checked = this.checked;
+            });
+            updateBulkToolbar();
+        });
+    }
+
+    deviceCheckboxes.forEach(cb => {
+        cb.addEventListener('change', function() {
+            const allChecked = document.querySelectorAll('.device-checkbox:checked').length === deviceCheckboxes.length;
+            if (checkAll) {
+                checkAll.checked = allChecked;
+            }
+            updateBulkToolbar();
+        });
+    });
+
+    function submitBulkAction(action) {
+        const checkedBoxes = document.querySelectorAll('.device-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            alert('Vui lòng chọn ít nhất một thiết bị.');
+            return;
+        }
+
+        const confirmMsg = action === 'unlink' 
+            ? `Bạn có chắc muốn gỡ liên kết ${checkedBoxes.length} thiết bị đã chọn?` 
+            : `CẢNH BÁO: Bạn có chắc chắn muốn xóa (Block) ${checkedBoxes.length} thiết bị đã chọn?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        document.querySelectorAll('.bulk-temp-input').forEach(el => el.remove());
+
+        checkedBoxes.forEach(cb => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids[]';
+            input.value = cb.value;
+            input.className = 'bulk-temp-input';
+            bulkForm.appendChild(input);
+        });
+
+        bulkActionVal.value = action;
+        bulkForm.submit();
+    }
 </script>
 @endsection

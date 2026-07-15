@@ -88,6 +88,10 @@
                                 
                                 <div id="dropdown-{{ $user->id }}" class="action-dropdown absolute right-0 mt-1.5 w-48 bg-white border border-gray-150 rounded-2xl shadow-xl z-30 hidden overflow-hidden divide-y divide-gray-50 text-left">
                                     <div class="py-1">
+                                        <button type="button" onclick="openDetailsModal({{ $user->id }})" class="w-full text-left px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors flex items-center space-x-2">
+                                            <span>👁️</span>
+                                            <span>Xem chi tiết</span>
+                                        </button>
                                         <button type="button" onclick="openEditModal({{ $user->id }}, '{{ addslashes($user->name) }}', '{{ addslashes($user->email) }}', '{{ $user->role }}', {{ $user->is_active ? 1 : 0 }}, {{ $user->max_licenses }}, {{ $user->hasPermission('can_create_license') ? 1 : 0 }}, {{ $user->hasPermission('can_manage_devices') ? 1 : 0 }}, {{ $user->hasPermission('can_use_sepay') ? 1 : 0 }})" class="w-full text-left px-4 py-2.5 text-xs font-bold text-cyan-600 hover:bg-cyan-50 transition-colors flex items-center space-x-2">
                                             <span>✏️</span>
                                             <span>Sửa &amp; Phân quyền</span>
@@ -275,6 +279,69 @@
     </div>
 </div>
 
+<!-- User Details Modal -->
+<div id="details-user-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-xl border border-gray-100 space-y-4 my-8">
+        <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+            <h3 class="font-extrabold text-lg text-gray-900 flex items-center space-x-2">
+                <span>👁️</span>
+                <span>Chi tiết Người dùng</span>
+            </h3>
+            <button onclick="closeModal('details-user-modal')" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+            <div><strong>Họ và tên:</strong> <span id="det-name" class="font-semibold text-gray-800">...</span></div>
+            <div><strong>Địa chỉ Email:</strong> <span id="det-email" class="font-mono text-gray-800">...</span></div>
+            <div><strong>Vai trò hệ thống:</strong> <span id="det-role">...</span></div>
+            <div><strong>Trạng thái tài khoản:</strong> <span id="det-status">...</span></div>
+            <div><strong>Giới hạn tạo Key:</strong> <span id="det-limit" class="font-semibold text-gray-850">...</span></div>
+            <div><strong>Ngày tạo tài khoản:</strong> <span id="det-created" class="text-gray-500">...</span></div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-2 gap-4 py-4 bg-gray-50 rounded-2xl border border-gray-100 text-center">
+            <div>
+                <p class="text-2xl font-black text-emerald-600" id="stat-licenses">0</p>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Tổng số Giấy phép (Keys)</p>
+            </div>
+            <div>
+                <p class="text-2xl font-black text-cyan-600" id="stat-devices">0</p>
+                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mt-0.5">Thiết bị đang liên kết</p>
+            </div>
+        </div>
+
+        <!-- Licenses table inside modal -->
+        <div class="space-y-2">
+            <h4 class="font-black text-sm text-gray-800">Danh sách Giấy phép (Licenses)</h4>
+            <div class="border border-gray-100 rounded-2xl overflow-hidden max-h-60 overflow-y-auto shadow-inner bg-gray-50/20">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-100 text-gray-400 uppercase font-bold">
+                            <th class="p-3 w-1/3">Giấy phép Key</th>
+                            <th class="p-3">Ứng dụng</th>
+                            <th class="p-3">Trạng thái</th>
+                            <th class="p-3">Thiết bị</th>
+                            <th class="p-3">Hạn dùng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="det-licenses-tbody" class="divide-y divide-gray-50">
+                        <tr>
+                            <td colspan="5" class="p-4 text-center text-gray-400">Đang tải dữ liệu...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="flex pt-2">
+            <button type="button" onclick="closeModal('details-user-modal')" class="w-full py-3 text-sm font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-colors">Đóng</button>
+        </div>
+    </div>
+</div>
+
 <script>
     function openModal(id) {
         document.getElementById(id).classList.remove('hidden');
@@ -313,5 +380,79 @@
             el.classList.add('hidden');
         });
     });
+
+    function openDetailsModal(id) {
+        document.getElementById('det-name').textContent = '...';
+        document.getElementById('det-email').textContent = '...';
+        document.getElementById('det-role').innerHTML = '...';
+        document.getElementById('det-status').innerHTML = '...';
+        document.getElementById('det-limit').textContent = '...';
+        document.getElementById('det-created').textContent = '...';
+        document.getElementById('stat-licenses').textContent = '0';
+        document.getElementById('stat-devices').textContent = '0';
+        
+        const tbody = document.getElementById('det-licenses-tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">Đang tải dữ liệu...</td></tr>';
+        
+        openModal('details-user-modal');
+
+        fetch('/admin/users/' + id + '/details')
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    const u = res.user;
+                    document.getElementById('det-name').textContent = u.name;
+                    document.getElementById('det-email').textContent = u.email;
+                    
+                    const roleLabel = u.role === 'super_admin' 
+                        ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700">Super Admin</span>' 
+                        : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">User thường</span>';
+                    document.getElementById('det-role').innerHTML = roleLabel;
+
+                    const statusLabel = u.is_active 
+                        ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">Hoạt động</span>' 
+                        : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700">Tạm khóa</span>';
+                    document.getElementById('det-status').innerHTML = statusLabel;
+
+                    document.getElementById('det-limit').textContent = u.max_licenses > 0 ? u.max_licenses + ' Keys' : 'Không giới hạn';
+                    document.getElementById('det-created').textContent = u.created_at;
+
+                    document.getElementById('stat-licenses').textContent = res.stats.total_licenses;
+                    document.getElementById('stat-devices').textContent = res.stats.total_devices;
+
+                    tbody.innerHTML = '';
+                    if (res.licenses.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-gray-400">Người dùng này chưa có giấy phép nào.</td></tr>';
+                    } else {
+                        res.licenses.forEach(lic => {
+                            const tr = document.createElement('tr');
+                            tr.className = 'hover:bg-gray-50/50 transition-colors';
+                            
+                            const statusVi = {
+                                'active': '<span class="text-emerald-600 font-bold">Active</span>',
+                                'trial': '<span class="text-blue-600 font-bold">Trial</span>',
+                                'expired': '<span class="text-rose-500 font-bold">Expired</span>',
+                                'disabled': '<span class="text-gray-400 font-bold">Disabled</span>',
+                                'banned': '<span class="text-red-700 font-bold">Banned</span>',
+                            }[lic.status] || lic.status;
+
+                            tr.innerHTML = `
+                                <td class="p-3 font-mono font-bold text-gray-800">${lic.license_key}</td>
+                                <td class="p-3 font-medium text-gray-600">${lic.product_name}</td>
+                                <td class="p-3">${statusVi}</td>
+                                <td class="p-3 font-semibold text-gray-700">${lic.devices_count}/${lic.max_devices}</td>
+                                <td class="p-3 text-gray-500 font-medium">${lic.expire_at}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500 font-bold">Không thể tải thông tin chi tiết.</td></tr>';
+                }
+            })
+            .catch(err => {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center text-red-500 font-bold">Lỗi kết nối máy chủ.</td></tr>';
+            });
+    }
 </script>
 @endsection

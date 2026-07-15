@@ -18,6 +18,14 @@
             <option value="banned" {{ request('status') === 'banned' ? 'selected' : '' }}>{{ __('messages.banned') }}</option>
         </select>
 
+        <select name="product_name" class="px-4 py-2.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm bg-white">
+            <option value="">{{ __('Tất cả ứng dụng') }}</option>
+            <option value="default" {{ request('product_name') === 'default' ? 'selected' : '' }}>Dùng chung (Không chỉ định)</option>
+            @foreach($products as $prod)
+                <option value="{{ $prod }}" {{ request('product_name') === $prod ? 'selected' : '' }}>{{ $prod }}</option>
+            @endforeach
+        </select>
+
         <button type="submit" class="px-5 py-2.5 text-sm font-bold rounded-2xl border border-emerald-500 text-emerald-600 bg-white hover:bg-emerald-50 transition-colors">
             {{ __('messages.filter') }}
         </button>

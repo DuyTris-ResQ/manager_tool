@@ -251,6 +251,12 @@
                                 <option value="production" {{ $settings['sepay_env'] === 'production' ? 'selected' : '' }}>Production (Thực tế)</option>
                             </select>
                         </div>
+                        <div>
+                            <button type="button" onclick="checkSePayConnection(event)" class="w-full mt-2 py-2.5 px-4 text-xs font-bold rounded-2xl border border-emerald-500 text-emerald-600 bg-white hover:bg-emerald-50 transition-colors flex items-center justify-center space-x-1.5 shadow-sm">
+                                <span>⚡</span>
+                                <span>Kiểm tra kết nối SePay</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <p class="text-xs text-gray-400 mt-4">Thông tin kết nối API để tích hợp cổng thanh toán SePay Checkout Form.</p>
@@ -516,5 +522,38 @@
         // Initialize visibility
         toggleGatewayConfigs();
     });
+
+    function checkSePayConnection(event) {
+        const apiKey = document.querySelector('input[name="sepay_api_key"]').value.trim();
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>Đang kiểm tra...</span>';
+        
+        fetch("{{ route('admin.settings.check_sepay') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ sepay_api_key: apiKey })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            if (data.success) {
+                alert('✅ ' + data.message);
+            } else {
+                alert('❌ ' + data.message);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            alert('❌ Lỗi kết nối đến máy chủ.');
+        });
+    }
 </script>
 @endsection

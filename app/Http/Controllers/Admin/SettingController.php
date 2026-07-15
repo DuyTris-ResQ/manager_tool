@@ -215,4 +215,70 @@ class SettingController extends Controller
 
         return back()->with('success', "Settings updated successfully!");
     }
+
+    public function checkSepay(Request $request)
+    {
+        $apiKey = $request->input('sepay_api_key');
+        
+        if (empty($apiKey)) {
+            $user = auth()->user();
+            if ($user->isSuperAdmin()) {
+                $apiKey = Setting::get('sepay_api_key', '');
+            } else {
+                $apiKey = $user->getSetting('sepay_api_key', '');
+            }
+        }
+
+        if (empty($apiKey)) {
+            return response()->json(['success' => false, 'message' => 'API Key SePay không được để trống.'], 400);
+        }
+
+        try {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, 'https://qr.sepay.vn/api/merchant/profile');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $apiKey,
+                'Accept: application/json',
+            ]);
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200) {
+                $data = json_decode($response, true);
+                // SePay API trả về format data trực tiếp hoặc có bọc status
+                $status = $data['status'] ?? 200;
+                if ($status == 200 || $status == 'success') {
+                    $merchantName = $data['data']['name'] ?? ($data['name'] ?? 'N/A');
+                    return response()->json([
+                        'success' => true, 
+                        'message' => 'Kết nối thành công! Merchant: ' . $merchantName
+                    ]);
+                }
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Lỗi phản hồi: ' . ($data['message'] ?? 'API Key không hợp lệ.')
+                ], 400);
+            }
+
+            $msg = 'Không thể kết nối đến SePay.';
+            if ($httpCode === 401) {
+                $msg = 'API Key SePay không hợp lệ (Unauthorized).';
+            } elseif ($httpCode === 403) {
+                $msg = 'Bị từ chối truy cập (Forbidden).';
+            } else {
+                $msg .= ' Mã phản hồi HTTP: ' . $httpCode;
+            }
+
+            return response()->json([
+                'success' => false, 
+                'message' => $msg
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Lỗi kết nối: ' . $e->getMessage()], 500);
+        }
+    }
 }
